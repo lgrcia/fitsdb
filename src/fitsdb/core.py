@@ -109,18 +109,29 @@ def instruments_definitions(config: dict) -> dict:
 
 
 def get_definition(
-    fits_header: Header, keywords: list | tuple = (), definitions: dict = None
+    fits_header: Header,
+    keywords: list | tuple = ("TELESCOP",),
+    definitions: dict = None,
 ) -> dict:
+
+    default_instrument_name = []
+    if definitions is None:
+        definitions = instruments_definitions(DEFAULT_CONFIG)
 
     for keyword in keywords:
         if keyword in fits_header:
             instrument_name = fits_header[keyword].strip().lower()
             if instrument_name not in definitions:
-                continue
+                default_instrument_name.append(instrument_name)
             else:
                 return definitions[instrument_name]
 
-    return {**DEFAULT_INSTRUMENT["definition"], "name": "default"}
+    default_instrument_name.append("(default)")
+
+    return {
+        **DEFAULT_INSTRUMENT["definition"],
+        "name": " ".join(default_instrument_name),
+    }
 
 
 def unique_hash(string: str) -> str:
