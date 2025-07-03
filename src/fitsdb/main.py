@@ -1,9 +1,11 @@
 import argparse
-from pathlib import Path
-from tqdm import tqdm
-from fitsdb import core, db
-from multiprocessing import Pool
 import os
+from multiprocessing import Pool
+from pathlib import Path
+
+from tqdm import tqdm
+
+from fitsdb import core, db
 
 
 def get_files(folder: str | Path, name: str) -> list[Path]:
@@ -47,7 +49,7 @@ def index_folder(
     if duplicate:
         new_files = files
     else:
-        print(f"Checking new files")
+        print("Checking new files")
         new_files = [file for file in files if not db.path_in_db(con, file)]
 
     with Pool(processes=p) as pool:

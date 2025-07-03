@@ -12,10 +12,42 @@ fitsdb = "fitsdb.main:main"
 
 [project.optional-dependencies]
 test = ["pytest", "jaxoplanet>=0.1.0", "pytest-xdist"]
-
+dev = ["ruff", "black", "isort"]
 [tool.pdm.build]
 includes = ["src/fitsdb/*.sql"]
 
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
+
+[tool.black]
+target-version = ["py310"]
+line-length = 88
+
+[tool.ruff]
+line-length = 89
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["F", "I", "E", "W", "YTT", "B", "Q", "PLE", "PLR", "PLW", "UP"]
+ignore = [
+    "B023",    # Allow using global variables in lambdas
+    "E741",    # Allow ambiguous variable names
+    "PLR0912", # Allow many branches
+    "PLR0913", # Allow many arguments in function call
+    "PLR0915", # Allow many statements
+    "PLR2004", # Allow magic numbers in comparisons
+]
+# exclude = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["fitsdb"]
+combine-as-imports = true
+
+[tool.ruff.format]
+# Format-specific settings
+quote-style = "double"            # Use double quotes (Black default)
+indent-style = "space"
+line-ending = "auto"
+docstring-code-format = true
+skip-magic-trailing-comma = false # Format like Black

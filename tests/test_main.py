@@ -1,7 +1,6 @@
-import pytest
 from datetime import datetime, timedelta
-from fitsdb import core, db
 
+from fitsdb import core, db
 
 FAKE_CONFIG = {
     "test": {

@@ -1,14 +1,15 @@
-from pathlib import Path
-from astropy.io import fits
+import re
 from datetime import datetime
-from dateutil import parser
+from functools import partial
+from hashlib import sha1
+from pathlib import Path
+
+import yaml
 from astropy import units as astropy_units
 from astropy.coordinates import Angle
+from astropy.io import fits
 from astropy.io.fits import Header
-import re
-from hashlib import sha1
-import yaml
-from functools import partial
+from dateutil import parser
 
 DEFAULT_INSTRUMENT = {
     "instrument_names": {"default": ["default"]},
@@ -146,7 +147,7 @@ def get_data(file: Path | str, get_definition: callable) -> dict:
 
 
 def file_to_data_function(config_file: str | Path = None) -> callable:
-    config = yaml.safe_load(open(config_file, "r")) if config_file else DEFAULT_CONFIG
+    config = yaml.safe_load(open(config_file)) if config_file else DEFAULT_CONFIG
     name_keywords = instruments_name_keywords(config)
     definitions = instruments_definitions(config)
     _get_definition = partial(
