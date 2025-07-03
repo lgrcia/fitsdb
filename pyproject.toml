@@ -1,0 +1,21 @@
+[project]
+dependencies = ["astropy", "ipykernel", "tqdm", "pyyaml", "pandas"]
+name = "fitsdb"
+version = "0.0.1"
+description = "Raw FITS database management tool"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[project.scripts]
+fitsdb = "fitsdb.main:main"
+
+[project.optional-dependencies]
+test = ["pytest", "jaxoplanet>=0.1.0", "pytest-xdist"]
+
+[tool.pdm.build]
+includes = ["src/fitsdb/*.sql"]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
