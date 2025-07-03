@@ -7,6 +7,7 @@ from astropy.coordinates import Angle
 from astropy.io.fits import Header
 import json
 import re
+from hashlib import sha1
 
 DEFAULT_INSTRUMENT = {
     "instrument_names": {"default": ["default"]},
@@ -126,12 +127,15 @@ def get_data_from_header(
     definition = get_definition(fits_header)
     data = fits_to_dict(fits_header, definition)
     data["instrument"] = definition["name"]
+    data["hash"] = sha1(
+        bytes(
+            f"{data['instrument']}-{data['filter']}-{data['date'].strftime('%Y-%m-%d %H:%M:%S')}".encode(
+                "utf-8"
+            )
+        ),
+        usedforsecurity=False,
+    ).hexdigest()
     data["path"] = str(path.absolute()) if isinstance(path, Path) else path
-    data["hash"] = hash(
-        json.dumps(
-            {**data, "date": data["date"].strftime("%Y-%m-%d %H:%M:%S")}, sort_keys=True
-        )
-    )
     return data
 
 

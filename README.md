@@ -118,6 +118,7 @@ fitsdb index <folder> -i instruments.yaml [-o output.sqlite]
 - `-i`, `--instruments`: Path to the `instruments.yaml` file defining instrument configurations. If not provided, a built-in default is used.
 - `-o`, `--output`: (Optional) Path to the output database file. Defaults to `db.sqlite` in the folder.
 - `-p`, `--processes`: (Optional) Number of processes to use for indexing (default: number of CPU cores).
+- `--duplicate`/`--no-duplicate`: (Optional) Parse files even if they already exist in the database (default: `--no-duplicate`).
 
 ### Show Observations
 Show observations from the database (supports regex, case-insensitive):
@@ -131,8 +132,7 @@ fitsdb observations <db.sqlite> [-i INSTRUMENT] [-d DATE] [-f FILTER] [-o OBJECT
 - `-d`, `--date`: Filter by observation date (YYYY-MM-DD).
 - `-f`, `--filter`: Filter by filter name (regex).
 - `-o`, `--object`: Filter by object name (regex).
-- `--exposure`: Show exposure times.
-- `--no-exposure`: Do not show exposure times (default).
+- `--exposure`/`--no-exposure`: Do exposure times (False by default).
 
 All regex filters are case-insensitive.
 

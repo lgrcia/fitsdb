@@ -69,7 +69,9 @@ def add_regexp_to_connection(con):
     con.create_function("REGEXP", 2, regexp)
 
 
-def index_folder(folder: str, instruments_file: str, db_file: str, p=None):
+def index_folder(
+    folder: str, instruments_file: str, db_file: str, p=None, duplicate=False
+):
     if p is None:
         p = os.cpu_count() or 1
 
@@ -88,16 +90,20 @@ def index_folder(folder: str, instruments_file: str, db_file: str, p=None):
     con = connect(db_file)
     added = 0
 
-    print(f"Checking new files")
-    new_files = [file for file in files if not db.path_in_db(con, file)]
+    if duplicate:
+        new_files = files
+    else:
+        print(f"Checking new files")
+        new_files = [file for file in files if not db.path_in_db(con, file)]
 
     with Pool(processes=p) as pool:
         for data in tqdm(
             pool.imap(_get_data, new_files),
             total=len(new_files),
         ):
-            insert_file(con, data)
-            added += 1
+            is_inserted = insert_file(con, data)
+            if is_inserted:
+                added += 1
 
     con.commit()
     con.close()
@@ -149,6 +155,12 @@ def main():
         default=None,
         help="Number of processes to use for indexing (default: number of CPU cores).",
     )
+    index_parser.add_argument(
+        "--duplicate",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Reset the database before indexing (default: False).",
+    )
 
     # show observations
     show_obs_parser = subparsers.add_parser(
@@ -170,7 +182,9 @@ def main():
 
     if args.command == "index":
         db_path = args.output if args.output else str(Path(args.folder) / "db.sqlite")
-        index_folder(args.folder, args.instruments, db_path, args.processes)
+        index_folder(
+            args.folder, args.instruments, db_path, args.processes, args.duplicate
+        )
 
     elif args.command == "observations" or args.command == "files":
         con = connect(args.db)

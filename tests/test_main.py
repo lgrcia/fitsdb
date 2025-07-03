@@ -132,3 +132,23 @@ def test_calibration_files_darks():
     assert len(files) == 10 and all(
         [f.strip(".fits")[-2::] == "20" in f for f in files]
     )
+
+
+def test_add_duplicate():
+    con = db.connect()
+    header = {"DATE-OBS": datetime.now().isoformat()}
+    data = core.get_data_from_header(header, core.get_definition)
+    db.insert_file(con, data, update_obs=False)
+    db.insert_file(con, data, update_obs=False)
+    db.insert_file(con, data, update_obs=False)
+
+    header = {"DATE-OBS": (datetime.now() + timedelta(days=1)).isoformat()}
+    data = core.get_data_from_header(header, core.get_definition)
+    db.insert_file(con, data, update_obs=False)
+    con.commit()
+
+    # Try to insert the same file again
+    assert not db.insert_file(con, data, update_obs=False)
+
+    # Check that the file was not added again
+    assert con.execute("SELECT COUNT(*) FROM files").fetchall()[0][0] == 2

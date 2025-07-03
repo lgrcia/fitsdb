@@ -39,15 +39,21 @@ def connect(file=None):
 
 
 def insert_file(con, data, update_obs=True):
-    _data = data.copy()
-    if _data["filter"]:
-        _data["filter"] = data["filter"].replace("'", "p")
+    in_db = (
+        len(
+            con.execute(
+                f"SELECT hash FROM files WHERE hash = ?", (data["hash"],)
+            ).fetchall()
+        )
+        == 1
+    )
 
-    # update observation
-    if update_obs:
-        _data["date"] = datetime.date(data["date"] - timedelta(hours=core.NIGHT_HOURS))
-        _data["date"] = _data["date"].strftime("%Y-%m-%d")
-        unique_obs = (
+    if not in_db:
+        _data = data.copy()
+        if _data["filter"]:
+            _data["filter"] = data["filter"].replace("'", "p")
+
+        obs = [
             "date",
             "instrument",
             "filter",
@@ -56,43 +62,57 @@ def insert_file(con, data, update_obs=True):
             "width",
             "height",
             "exposure",
-        )
-        con.execute(
-            f"INSERT OR IGNORE INTO observations({','.join(unique_obs)}, files) VALUES ({','.join(['?'] * len(unique_obs))}, 0)",
-            [_data[o] for o in unique_obs],
-        )
-        query = " AND ".join(
-            [f"{str(key)} = {in_value(_data[key])}" for key in unique_obs]
-        )
-        id = con.execute(f"SELECT rowid FROM observations where {query}").fetchall()[0][
-            0
+            "ra",
+            "dec",
+            "jd",
+            "hash",
+            "path",
         ]
-        con.execute(f"UPDATE observations SET files = files + 1 WHERE rowid = {id}")
+
+        _data["date"] = data["date"].strftime("%Y-%m-%d %H:%M:%S")
+
+        con.execute(
+            f"INSERT or IGNORE INTO files({','.join(obs)}) VALUES ({','.join(['?'] * len(obs))})",
+            [_data[o] for o in obs],
+        )
+
+        # update observation
+        if update_obs:
+            # is file new
+            _data["date"] = datetime.date(
+                data["date"] - timedelta(hours=core.NIGHT_HOURS)
+            )
+            _data["date"] = _data["date"].strftime("%Y-%m-%d")
+            unique_obs = (
+                "date",
+                "instrument",
+                "filter",
+                "object",
+                "type",
+                "width",
+                "height",
+                "exposure",
+            )
+            con.execute(
+                f"INSERT OR IGNORE INTO observations({','.join(unique_obs)}, files) VALUES ({','.join(['?'] * len(unique_obs))}, 0)",
+                [_data[o] for o in unique_obs],
+            )
+            query = " AND ".join(
+                [f"{str(key)} = {in_value(_data[key])}" for key in unique_obs]
+            )
+
+            # number of files with this observation
+            id = con.execute(
+                f"SELECT rowid FROM observations where {query}"
+            ).fetchall()[0][0]
+            con.execute(f"UPDATE observations SET files = files + 1 WHERE rowid = {id}")
+            # set id in files
+            con.execute(
+                f"UPDATE files SET id = {id} WHERE hash = {in_value(data['hash'])}"
+            )
+            return True
     else:
-        id = None
-
-    obs = [
-        "date",
-        "instrument",
-        "filter",
-        "object",
-        "type",
-        "width",
-        "height",
-        "exposure",
-        "ra",
-        "dec",
-        "jd",
-        "hash",
-        "path",
-    ]
-
-    _data["date"] = data["date"].strftime("%Y-%m-%d %H:%M:%S")
-
-    con.execute(
-        f"INSERT or IGNORE INTO files({','.join(obs)}, id) VALUES ({','.join(['?'] * len(obs))}, {id})",
-        [_data[o] for o in obs],
-    )
+        return False
 
 
 def observations(con, group_exposures=True, **kwargs):

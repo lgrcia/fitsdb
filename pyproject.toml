@@ -1,7 +1,7 @@
 [project]
 dependencies = ["astropy", "ipykernel", "tqdm", "pyyaml", "pandas"]
 name = "fitsdb"
-version = "0.0.1"
+version = "0.0.2"
 description = "Raw FITS database management tool"
 readme = "README.md"
 requires-python = ">=3.10"
