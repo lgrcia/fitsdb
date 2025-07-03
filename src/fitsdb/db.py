@@ -1,10 +1,9 @@
 import sqlite3
+from datetime import datetime, timedelta
 from pathlib import Path
-from datetime import datetime
-import pandas as pd
-from datetime import datetime
-from datetime import timedelta
+
 import numpy as np
+import pandas as pd
 
 from fitsdb import core
 
@@ -32,7 +31,7 @@ def connect(file=None):
     # check if file Table exists
     tables = list(cur.execute("SELECT name FROM sqlite_master WHERE type='table';"))
     if len(tables) == 0:
-        db_creation = open(PWD / "sqlite.sql", "r").read()
+        db_creation = open(PWD / "sqlite.sql").read()
         cur.executescript(db_creation)
 
     return con
@@ -42,7 +41,7 @@ def insert_file(con, data, update_obs=True):
     in_db = (
         len(
             con.execute(
-                f"SELECT hash FROM files WHERE hash = ?", (data["hash"],)
+                "SELECT hash FROM files WHERE hash = ?", (data["hash"],)
             ).fetchall()
         )
         == 1
@@ -133,17 +132,18 @@ def observations(con, group_exposures=True, **kwargs):
     query = f"select * from observations where {where}"
 
     if group_exposures:
-        query = f"select *, SUM(files) from observations where {where} GROUP BY date, instrument, object, filter, type"
+        query = f"select rowid, *, SUM(files) from observations where {where} GROUP BY date, instrument, object, filter, type"
         df = pd.read_sql_query(query, con)
         df["files"]
         df = df.drop(columns=["files", "exposure"]).rename(
             columns={"SUM(files)": "files"}
         )
     else:
-        query = f"select * from observations where {where}"
+        query = f"select rowid, * from observations where {where}"
         df = pd.read_sql_query(query, con)
 
-    return df
+    df = df.rename(columns={"rowid": "id"})
+    return df.set_index("id").sort_index()
 
 
 def calibration_files(
@@ -220,13 +220,13 @@ def path_in_db(con, path):
 def filter_query(table, instrument=None, date=None, filter_=None, object_=None):
     conditions = []
     if instrument:
-        conditions.append(f"instrument REGEXP ?")
+        conditions.append("instrument REGEXP ?")
     if date:
-        conditions.append(f"date REGEXP ?")
+        conditions.append("date REGEXP ?")
     if filter_:
-        conditions.append(f"filter REGEXP ?")
+        conditions.append("filter REGEXP ?")
     if object_:
-        conditions.append(f"object REGEXP ?")
+        conditions.append("object REGEXP ?")
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     return f"SELECT * FROM {table} {where}"
 

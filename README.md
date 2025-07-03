@@ -136,6 +136,78 @@ fitsdb observations <db.sqlite> [-i INSTRUMENT] [-d DATE] [-f FILTER] [-o OBJECT
 
 All regex filters are case-insensitive.
 
+## API
+
+`fitsdb` includes a FastAPI-based REST API for querying the database over HTTP. The API provides endpoints to retrieve observations and file metadata.
+
+### Running the API Server
+
+To start the API server, you need to set the `FITSDB` environment variable to point to your database file and run uvicorn:
+
+```bash
+export FITSDB=/path/to/your/db.sqlite
+uvicorn fitsdb.api:app --reload
+```
+
+The API will be available at `http://localhost:8000` by default. You can view the interactive API documentation at `http://localhost:8000/docs`.
+
+### Endpoints
+
+#### Root Endpoint
+
+#### Get Observations
+**GET /observations/** - Retrieve observations with optional filtering
+
+Query parameters (all optional):
+- `instrument`: Filter by instrument name (string)
+- `filter`: Filter by filter name (string) 
+- `date`: Filter by observation date in YYYY-MM-DD format (string)
+- `object`: Filter by object name (string)
+
+```bash
+# Get all observations
+curl http://localhost:8000/observations/
+
+# Filter by instrument
+curl "http://localhost:8000/observations/?instrument=Callisto"
+
+# Filter by multiple parameters
+curl "http://localhost:8000/observations/?instrument=Callisto&filter=a&date=2020-04-01"
+```
+
+Returns: JSON array of observation records with metadata.
+
+#### Get Files by ID
+**GET /files/{index}** - Retrieve file details by observation index
+
+Path parameters:
+- `index`: observation index (integer)
+
+```bash
+# Get file with ID 123
+curl http://localhost:8000/files/123
+```
+
+Returns: JSON array containing the file record, sorted by date.
+
+### Example Response
+
+The `/observations/` endpoint returns data in this format:
+```json
+[
+  {
+    "path": "/path/to/file1.fits",
+    "date": "2020-04-01 20:30:00",
+    "instrument": "Callisto",
+    ...
+  }
+]
+```
+
+### Environment Variables
+
+- `FITSDB`: Required. Path to the SQLite database file created by the `fitsdb index` command.
+
 ## Development
 ### Requirements
 - Python 3.11+

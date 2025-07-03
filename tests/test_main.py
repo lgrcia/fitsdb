@@ -1,7 +1,8 @@
-import pytest
 from datetime import datetime, timedelta
-from fitsdb import core, db
 
+import pandas as pd
+
+from fitsdb import core, db
 
 FAKE_CONFIG = {
     "test": {
@@ -33,7 +34,9 @@ def test_get_definition():
 
 
 def test_no_header_no_definitions():
-    assert core.get_data_from_header({}, core.get_definition)["instrument"] == "default"
+    assert (
+        core.get_data_from_header({}, core.get_definition)["instrument"] == "(default)"
+    )
 
 
 def test_insert_file():
@@ -152,3 +155,22 @@ def test_add_duplicate():
 
     # Check that the file was not added again
     assert con.execute("SELECT COUNT(*) FROM files").fetchall()[0][0] == 2
+
+
+def test_obs_id():
+    headers = [{"TELESCOP": "c"}, {"TELESCOP": "a"}, {"TELESCOP": "b"}]
+    con = db.connect()
+
+    for header in headers:
+        data = core.get_data_from_header(header, core.get_definition)
+        db.insert_file(con, data)
+
+    con.commit()
+
+    files_inst_id = pd.read_sql("SELECT instrument, id FROM files", con).to_dict(
+        orient="records"
+    )
+    obs = db.observations(con)
+
+    for file in files_inst_id:
+        assert obs.loc[file["id"]].instrument == file["instrument"]
