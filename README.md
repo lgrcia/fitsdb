@@ -13,10 +13,19 @@ from fitsdb import db
 
 con = db.connect("db.sqlite")
 
-db.observations_files(con, "dark", "2020-04-01", filter="a", exposure=20.0, tolerance=5, past=3)
+db.observations_files(
+    con, 
+    "flat", 
+    "2020-04-01", 
+    filter="a", 
+    exposure=120.0, 
+    tolerance=50, 
+    past=3,
+)
 ```
-returns a list of dark calibration files 
-- with exposure times of 20 seconds +/- 5 seconds.
+returns a list of flat calibration files:
+- taken with filter `a`
+- with exposure times of 120 seconds +/- 50 seconds.
 - taken at most 3 days prior to the science frames on a specific date.
 
 
