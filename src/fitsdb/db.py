@@ -132,17 +132,18 @@ def observations(con, group_exposures=True, **kwargs):
     query = f"select * from observations where {where}"
 
     if group_exposures:
-        query = f"select *, SUM(files) from observations where {where} GROUP BY date, instrument, object, filter, type"
+        query = f"select rowid, *, SUM(files) from observations where {where} GROUP BY date, instrument, object, filter, type"
         df = pd.read_sql_query(query, con)
         df["files"]
         df = df.drop(columns=["files", "exposure"]).rename(
             columns={"SUM(files)": "files"}
         )
     else:
-        query = f"select * from observations where {where}"
+        query = f"select rowid, * from observations where {where}"
         df = pd.read_sql_query(query, con)
 
-    return df
+    df = df.rename(columns={"rowid": "id"})
+    return df.set_index("id").sort_index()
 
 
 def calibration_files(
