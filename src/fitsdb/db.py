@@ -215,3 +215,28 @@ def path_in_db(con, path):
     return (
         con.execute(f"SELECT * FROM files WHERE path='{path}'").fetchone() is not None
     )
+
+
+def filter_query(table, instrument=None, date=None, filter_=None, object_=None):
+    conditions = []
+    if instrument:
+        conditions.append(f"instrument REGEXP ?")
+    if date:
+        conditions.append(f"date REGEXP ?")
+    if filter_:
+        conditions.append(f"filter REGEXP ?")
+    if object_:
+        conditions.append(f"object REGEXP ?")
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    return f"SELECT * FROM {table} {where}"
+
+
+def add_regexp_to_connection(con):
+    import re
+
+    def regexp(expr, item):
+        if item is None:
+            return False
+        return re.search(expr, str(item), re.IGNORECASE) is not None
+
+    con.create_function("REGEXP", 2, regexp)

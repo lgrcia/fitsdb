@@ -5,9 +5,10 @@ from dateutil import parser
 from astropy import units as astropy_units
 from astropy.coordinates import Angle
 from astropy.io.fits import Header
-import json
 import re
 from hashlib import sha1
+import yaml
+from functools import partial
 
 DEFAULT_INSTRUMENT = {
     "instrument_names": {"default": ["default"]},
@@ -121,20 +122,19 @@ def get_definition(
     return {**DEFAULT_INSTRUMENT["definition"], "name": "default"}
 
 
+def unique_hash(string: str) -> str:
+    return sha1(string.encode("utf-8"), usedforsecurity=False).hexdigest()
+
+
 def get_data_from_header(
     fits_header: Header | dict, get_definition: callable, path: Path | str | None = None
 ) -> dict:
     definition = get_definition(fits_header)
     data = fits_to_dict(fits_header, definition)
     data["instrument"] = definition["name"]
-    data["hash"] = sha1(
-        bytes(
-            f"{data['instrument']}-{data['filter']}-{data['date'].strftime('%Y-%m-%d %H:%M:%S')}".encode(
-                "utf-8"
-            )
-        ),
-        usedforsecurity=False,
-    ).hexdigest()
+    data["hash"] = unique_hash(
+        f"{data['instrument']}-{data['filter']}-{data['date'].strftime('%Y-%m-%d %H:%M:%S')}"
+    )
     data["path"] = str(path.absolute()) if isinstance(path, Path) else path
     return data
 
@@ -143,3 +143,13 @@ def get_data(file: Path | str, get_definition: callable) -> dict:
     header = fits.getheader(file)
     data = get_data_from_header(header, get_definition, path=file)
     return data
+
+
+def file_to_data_function(config_file: str | Path = None) -> callable:
+    config = yaml.safe_load(open(config_file, "r")) if config_file else DEFAULT_CONFIG
+    name_keywords = instruments_name_keywords(config)
+    definitions = instruments_definitions(config)
+    _get_definition = partial(
+        get_definition, keywords=name_keywords, definitions=definitions
+    )
+    return partial(get_data, get_definition=_get_definition)

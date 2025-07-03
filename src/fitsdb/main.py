@@ -1,48 +1,13 @@
 import argparse
-import yaml
 from pathlib import Path
 from tqdm import tqdm
-from functools import partial
-from fitsdb.core import (
-    instruments_name_keywords,
-    instruments_definitions,
-    get_definition,
-    get_data,
-)
-from fitsdb.db import connect, insert_file
 from fitsdb import core, db
 from multiprocessing import Pool
 import os
 
 
-def file_to_data_function(config_file: str | Path = None):
-    config = (
-        yaml.safe_load(open(config_file, "r")) if config_file else core.DEFAULT_CONFIG
-    )
-    name_keywords = instruments_name_keywords(config)
-    definitions = instruments_definitions(config)
-    _get_definition = partial(
-        get_definition, keywords=name_keywords, definitions=definitions
-    )
-    return partial(get_data, get_definition=_get_definition)
-
-
 def get_files(folder: str | Path, name: str) -> list[Path]:
     return Path(folder).rglob(name)
-
-
-def filter_query(table, instrument=None, date=None, filter_=None, object_=None):
-    conditions = []
-    if instrument:
-        conditions.append(f"instrument REGEXP ?")
-    if date:
-        conditions.append(f"date REGEXP ?")
-    if filter_:
-        conditions.append(f"filter REGEXP ?")
-    if object_:
-        conditions.append(f"object REGEXP ?")
-    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-    return f"SELECT * FROM {table} {where}"
 
 
 def get_query_params(instrument=None, date=None, filter_=None, object_=None):
@@ -56,17 +21,6 @@ def get_query_params(instrument=None, date=None, filter_=None, object_=None):
     if object_:
         params.append(object_)
     return params
-
-
-def add_regexp_to_connection(con):
-    import re
-
-    def regexp(expr, item):
-        if item is None:
-            return False
-        return re.search(expr, str(item), re.IGNORECASE) is not None
-
-    con.create_function("REGEXP", 2, regexp)
 
 
 def index_folder(
@@ -86,8 +40,8 @@ def index_folder(
             )
 
     files = list(get_files(folder, "*.f*t*"))
-    _get_data = file_to_data_function(instruments_file)
-    con = connect(db_file)
+    _get_data = core.file_to_data_function(instruments_file)
+    con = db.connect(db_file)
     added = 0
 
     if duplicate:
@@ -101,7 +55,7 @@ def index_folder(
             pool.imap(_get_data, new_files),
             total=len(new_files),
         ):
-            is_inserted = insert_file(con, data)
+            is_inserted = db.insert_file(con, data)
             if is_inserted:
                 added += 1
 
@@ -116,9 +70,9 @@ def index_folder(
 def show_table(table, db_path, instrument, date, filter_, object_):
     import pandas as pd
 
-    con = connect(db_path)
-    add_regexp_to_connection(con)
-    query = filter_query(table, instrument, date, filter_, object_)
+    con = db.connect(db_path)
+    db.add_regexp_to_connection(con)
+    query = db.filter_query(table, instrument, date, filter_, object_)
     params = get_query_params(instrument, date, filter_, object_)
     df = pd.read_sql_query(query, con, params=params)
     print(df)
@@ -187,7 +141,7 @@ def main():
         )
 
     elif args.command == "observations" or args.command == "files":
-        con = connect(args.db)
+        con = db.connect(args.db)
 
         if args.command == "observations":
             obs_df = db.observations(
@@ -204,4 +158,4 @@ def main():
 
 
 if __name__ == "__main__":
-    index_folder("/Users/lgarcia/data", None, "test.db")
+    main()
