@@ -1,5 +1,12 @@
 [project]
-dependencies = ["astropy", "ipykernel", "tqdm", "pyyaml", "pandas"]
+dependencies = [
+    "astropy",
+    "ipykernel",
+    "tqdm",
+    "pyyaml",
+    "pandas",
+    "fastapi[standard]",
+]
 name = "fitsdb"
 version = "0.0.2"
 description = "Raw FITS database management tool"
