@@ -49,8 +49,6 @@ def insert_file(con, data, update_obs=True):
 
     if not in_db:
         _data = data.copy()
-        if _data["filter"]:
-            _data["filter"] = data["filter"].replace("'", "p")
 
         obs = [
             "date",
@@ -71,7 +69,7 @@ def insert_file(con, data, update_obs=True):
         _data["date"] = data["date"].strftime("%Y-%m-%d %H:%M:%S")
 
         con.execute(
-            f"INSERT or IGNORE INTO files({','.join(obs)}) VALUES ({','.join(['?'] * len(obs))})",
+            f"INSERT or REPLACE INTO files({','.join(obs)}) VALUES ({','.join(['?'] * len(obs))})",
             [_data[o] for o in obs],
         )
 
@@ -93,28 +91,29 @@ def insert_file(con, data, update_obs=True):
                 "exposure",
             )
             con.execute(
-                f"INSERT OR IGNORE INTO observations({','.join(unique_obs)}, files) VALUES ({','.join(['?'] * len(unique_obs))}, 0)",
+                f"INSERT OR REPLACE INTO observations({','.join(unique_obs)}, files) VALUES ({','.join(['?'] * len(unique_obs))}, 0)",
                 [_data[o] for o in unique_obs],
             )
-            query = " AND ".join(
-                [f"{str(key)} = {in_value(_data[key])}" for key in unique_obs]
-            )
+            query = " AND ".join([f"{str(key)} = ?" for key in unique_obs])
 
             # number of files with this observation
             id = con.execute(
-                f"SELECT rowid FROM observations where {query}"
+                f"SELECT rowid FROM observations where {query}",
+                [_data[o] for o in unique_obs],
             ).fetchall()[0][0]
-            con.execute(f"UPDATE observations SET files = files + 1 WHERE rowid = {id}")
+            con.execute(
+                "UPDATE observations SET files = files + 1 WHERE rowid = ?", (id,)
+            )
             # set id in files
             con.execute(
-                f"UPDATE files SET id = {id} WHERE hash = {in_value(data['hash'])}"
+                "UPDATE files SET id = ? WHERE hash = ?", (id, in_value(data["hash"]))
             )
             return True
     else:
         return False
 
 
-def observations(con, group_exposures=True, **kwargs):
+def observations(con, group_exposures=True, sort_id=True, **kwargs):
     columns = {
         c[1]: "%"
         for c in con.execute("PRAGMA table_info(observations)").fetchall()[1:-3]
@@ -129,21 +128,24 @@ def observations(con, group_exposures=True, **kwargs):
     where = " AND ".join(
         [f"{key} LIKE {in_value(value)}" for key, value in columns.items()]
     )
-    query = f"select * from observations where {where}"
 
     if group_exposures:
-        query = f"select rowid, *, SUM(files) from observations where {where} GROUP BY date, instrument, object, filter, type"
+        query = f"select rowid, *, SUM(files) from observations where {where} GROUP BY date, instrument, object, filter, type ORDER BY date"
         df = pd.read_sql_query(query, con)
         df["files"]
         df = df.drop(columns=["files", "exposure"]).rename(
             columns={"SUM(files)": "files"}
         )
     else:
-        query = f"select rowid, * from observations where {where}"
+        query = f"select rowid, * from observations where {where} ORDER BY date"
         df = pd.read_sql_query(query, con)
 
     df = df.rename(columns={"rowid": "id"})
-    return df.set_index("id").sort_index()
+    df = df.set_index("id")
+    if sort_id:
+        return df.sort_index()
+    else:
+        return df
 
 
 def calibration_files(
