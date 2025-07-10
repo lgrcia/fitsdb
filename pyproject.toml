@@ -8,7 +8,7 @@ dependencies = [
     "fastapi[standard]",
 ]
 name = "fitsdb"
-version = "0.0.3"
+version = "0.0.4"
 description = "Raw FITS database management tool"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -20,8 +20,9 @@ fitsdb = "fitsdb.main:main"
 [project.optional-dependencies]
 test = ["pytest", "jaxoplanet>=0.1.0", "pytest-xdist"]
 dev = ["ruff", "black", "isort"]
+
 [tool.pdm.build]
-includes = ["src/fitsdb/*.sql"]
+includes = ["src/fitsdb", "src/fitsdb/*.sql"]
 
 [build-system]
 requires = ["pdm-backend"]
