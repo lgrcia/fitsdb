@@ -113,7 +113,7 @@ def insert_file(con, data, update_obs=True):
         return False
 
 
-def observations(con, group_exposures=True, sort_id=True, **kwargs):
+def observations(con, group_exposures=True, sort_id=True, limit=1000000, **kwargs):
     columns = {
         c[1]: "%"
         for c in con.execute("PRAGMA table_info(observations)").fetchall()[1:-3]
@@ -130,15 +130,15 @@ def observations(con, group_exposures=True, sort_id=True, **kwargs):
     )
 
     if group_exposures:
-        query = f"select rowid, *, SUM(files) from observations where {where} GROUP BY date, instrument, object, filter, type ORDER BY date"
-        df = pd.read_sql_query(query, con)
+        query = f"select rowid, *, SUM(files) from observations where {where} GROUP BY date, instrument, object, filter, type ORDER BY date LIMIT ?"
+        df = pd.read_sql_query(query, con, params=(limit,))
         df["files"]
         df = df.drop(columns=["files", "exposure"]).rename(
             columns={"SUM(files)": "files"}
         )
     else:
-        query = f"select rowid, * from observations where {where} ORDER BY date"
-        df = pd.read_sql_query(query, con)
+        query = f"select rowid, * from observations where {where} ORDER BY date LIMIT ?"
+        df = pd.read_sql_query(query, con, params=(limit,))
 
     df = df.rename(columns={"rowid": "id"})
     df = df.set_index("id")

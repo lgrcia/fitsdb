@@ -8,7 +8,8 @@ from fitsdb import db
 
 app = FastAPI()
 
-db_path = os.environ.get("FITSDB", None)
+DB_PATH = os.environ.get("FITSDB", None)
+LIMIT = os.environ.get("LIMIT", "30")
 
 origins = [
     "http://localhost.tiangolo.com",
@@ -35,7 +36,7 @@ def read_observations(
     object: str | None = None,
     type: str | None = None,
 ):
-    con = db.connect(db_path)
+    con = db.connect(DB_PATH)
     obs = db.observations(
         con,
         instrument=instrument,
@@ -44,6 +45,7 @@ def read_observations(
         object=object,
         type=type,
         sort_id=False,
+        limit=int(LIMIT),
     )
     data = obs.to_dict(orient="records")
     con.close()
@@ -52,7 +54,7 @@ def read_observations(
 
 @app.get("/files/{index}")
 def read_files(index: int):
-    con = db.connect(db_path)
+    con = db.connect(DB_PATH)
     files = pd.read_sql("SELECT * FROM files where id = ?", con, params=(index,))
     data = files.to_dict(orient="records")
     data = sorted(data, key=lambda x: x["date"])
