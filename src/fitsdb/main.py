@@ -26,7 +26,7 @@ def get_query_params(instrument=None, date=None, filter_=None, object_=None):
 
 
 def index_folder(
-    folder: str, instruments_file: str, db_file: str, p=None, duplicate=False
+    folder: str, instruments_file: str, db_file: str, p=None, update=False
 ):
     if p is None:
         p = os.cpu_count() or 1
@@ -46,20 +46,31 @@ def index_folder(
     con = db.connect(db_file)
     added = 0
 
-    if duplicate:
-        new_files = files
+    if update:
+        print("Updating file paths already in database")
+        files_to_process = [file for file in files if db.path_in_db(con, file)]
     else:
         print("Checking new files")
-        new_files = [file for file in files if not db.path_in_db(con, file)]
+        files_to_process = [file for file in files if not db.path_in_db(con, file)]
 
-    with Pool(processes=p) as pool:
-        for data in tqdm(
-            pool.imap(_get_data, new_files),
-            total=len(new_files),
-        ):
+    if p == 1:
+        for file in tqdm(files_to_process):
+            data = _get_data(file)
+            if data["hash"] == "ecc44d756e6fedbf3a558ff22992c22717849998":
+                pass
             is_inserted = db.insert_file(con, data)
             if is_inserted:
                 added += 1
+
+    else:
+        with Pool(processes=p) as pool:
+            for data in tqdm(
+                pool.imap(_get_data, files_to_process),
+                total=len(files_to_process),
+            ):
+                is_inserted = db.insert_file(con, data)
+                if is_inserted:
+                    added += 1
 
     con.commit()
     con.close()
@@ -112,7 +123,7 @@ def main():
         help="Number of processes to use for indexing (default: number of CPU cores).",
     )
     index_parser.add_argument(
-        "--duplicate",
+        "--update",
         action=argparse.BooleanOptionalAction,
         default=False,
         help="Reset the database before indexing (default: False).",
@@ -139,10 +150,10 @@ def main():
     if args.command == "index":
         db_path = args.output if args.output else str(Path(args.folder) / "db.sqlite")
         index_folder(
-            args.folder, args.instruments, db_path, args.processes, args.duplicate
+            args.folder, args.instruments, db_path, args.processes, args.update
         )
 
-    elif args.command == "observations" or args.command == "files":
+    elif args.command in {"observations", "files"}:
         con = db.connect(args.db)
 
         if args.command == "observations":
