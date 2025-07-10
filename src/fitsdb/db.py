@@ -91,7 +91,7 @@ def insert_file(con, data, update_obs=True):
                 "exposure",
             )
             con.execute(
-                f"INSERT OR REPLACE INTO observations({','.join(unique_obs)}, files) VALUES ({','.join(['?'] * len(unique_obs))}, 0)",
+                f"INSERT OR IGNORE INTO observations({','.join(unique_obs)}, files) VALUES ({','.join(['?'] * len(unique_obs))}, 0)",
                 [_data[o] for o in unique_obs],
             )
             query = " AND ".join([f"{str(key)} = ?" for key in unique_obs])
@@ -105,9 +105,7 @@ def insert_file(con, data, update_obs=True):
                 "UPDATE observations SET files = files + 1 WHERE rowid = ?", (id,)
             )
             # set id in files
-            con.execute(
-                "UPDATE files SET id = ? WHERE hash = ?", (id, in_value(data["hash"]))
-            )
+            con.execute("UPDATE files SET id = ? WHERE hash = ?", (id, data["hash"]))
             return True
     else:
         return False
