@@ -26,7 +26,7 @@ def get_query_params(instrument=None, date=None, filter_=None, object_=None):
 
 
 def index_folder(
-    folder: str, instruments_file: str, db_file: str, p=None, update=False
+    folder: str, instruments_file: str, db_file: str, p=None, update=False, close=False
 ):
     if p is None:
         p = os.cpu_count() or 1
@@ -73,11 +73,14 @@ def index_folder(
                     added += 1
 
     con.commit()
-    con.close()
-    if db_file is None:
-        print(f"Database created at: {db_file}")
-
     print(f"{added} files added to the database.")
+
+    if close:
+        con.close()
+        if db_file is None:
+            print(f"Database created at: {db_file}")
+    else:
+        return con
 
 
 def show_table(table, db_path, instrument, date, filter_, object_):
