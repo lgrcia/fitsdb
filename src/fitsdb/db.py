@@ -173,7 +173,7 @@ def calibration_files(
     fields = {}
     if instrument is not None:
         fields["instrument"] = instrument
-    if filter is not None:
+    if filter is not None and im_type == "flat":
         fields["filter"] = filter
     if dimensions is not None:
         fields["width"] = dimensions[0]
@@ -240,3 +240,15 @@ def add_regexp_to_connection(con):
         return re.search(expr, str(item), re.IGNORECASE) is not None
 
     con.create_function("REGEXP", 2, regexp)
+
+
+def observation_data(con, observation_id):
+    """Get the data for a specific observation."""
+    obs = observations(con, group_exposures=False).loc[observation_id]
+    data = {
+        "instrument": obs["instrument"],
+        "filter": obs["filter"],
+        "exposure": obs["exposure"],
+        "date": obs["date"],
+    }
+    return data

@@ -26,7 +26,12 @@ def get_query_params(instrument=None, date=None, filter_=None, object_=None):
 
 
 def index_folder(
-    folder: str, instruments_file: str, db_file: str, p=None, update=False, close=False
+    folder: str,
+    instruments_file: str = None,
+    db_file: str = None,
+    p=None,
+    update=False,
+    close=False,
 ):
     if p is None:
         p = os.cpu_count() or 1
